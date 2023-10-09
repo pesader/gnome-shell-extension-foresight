@@ -1,14 +1,12 @@
-const GLib = imports.gi.GLib;
-const Main = imports.ui.main;
-const Config = imports.misc.config;
-const Version = parseInt(Config.PACKAGE_VERSION.split('.')[0]);
-const ImportClass = Version == 3 ? imports.ui.viewSelector.ViewSelector : imports.ui.overviewControls.ControlsManager;
-const ShowAppsButton = Version == 3 ? Main.overview.viewSelector._showAppsButton : Main.overview.dash.showAppsButton;
-const OverviewShowApps = Version == 3 ? Main.overview.viewSelector : Main.overview;
-const MainOverview = Version == 3 ? Main.overview.viewSelector : Main.overview.dash;
-const Meta = imports.gi.Meta;
-const WindowManager = imports.ui.windowManager;
-const St = imports.gi.St;
+import GLib from 'gi://GLib';
+import Meta from 'gi://Meta';
+import St from 'gi://St';
+
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as WindowManager from 'resource:///org/gnome/shell/ui/windowManager.js';
+import {ControlsManager} from 'resource:///org/gnome/shell/ui/overviewControls.js';
+
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 let _signal = [];
 let _function;
@@ -53,14 +51,14 @@ function windowAccepted(window)
 function hideApps()
 {
     // hide the overview only if we're in application view
-    if (ShowAppsButton.checked)
+    if (Main.overview.dash.showAppsButton.checked)
         Main.overview.hide();
 }
 
 function showApps()
 {
     if (_workspace.list_windows().filter(window => windowAccepted(window)).length == 0)
-        OverviewShowApps.showApps();
+        Main.overview.showApps();
 }
 
 function windowAdded(workspace, window)
@@ -132,61 +130,62 @@ function overviewHidden()
 function animateFromOverview(callback)
 {
     // the original function sets _showAppsButton.checked = false, so we need to copy it to a local variable first
-    _showAppsButtonChecked = ShowAppsButton.checked;
+    _showAppsButtonChecked = Main.overview.dash.showAppsButton.checked;
     _function.apply(this, [callback]);
 }
 
-function init()
-{
-    _manager = global.screen;
-    if (_manager == undefined)
-        _manager = global.workspace_manager;
+export default class ShowApplicationViewWhenWorkspaceEmptyExtension extends Extension {
+    constructor(metadata)
+    {
+        super(metadata);
+        _manager = global.screen;
+        if (_manager == undefined)
+            _manager = global.workspace_manager;
 
-    _monitor = global.display.get_primary_monitor();
-}
+        _monitor = global.display.get_primary_monitor();
+    }
 
-function enable()
-{
-    _showAppsButtonChecked = ShowAppsButton.checked;
+    enable()
+    {
+        _showAppsButtonChecked = Main.overview.dash.showAppsButton.checked;
 
-    _function = ImportClass.prototype.animateFromOverview;
-    ImportClass.prototype.animateFromOverview = animateFromOverview;
+        _function = ControlsManager.prototype.animateFromOverview;
+        ControlsManager.prototype.animateFromOverview = animateFromOverview;
 
-    getWorkspace();
+        getWorkspace();
 
-    _signal['workspace-switched'] = _manager.connect('workspace-switched', checkWorkspace);
-    _signal['overview-hidden'] = Main.overview.connect('hidden', overviewHidden);
+        _signal['workspace-switched'] = _manager.connect('workspace-switched', checkWorkspace);
+        _signal['overview-hidden'] = Main.overview.connect('hidden', overviewHidden);
 
-    if (!Main.layoutManager._startingUp)
-        return;
+        if (!Main.layoutManager._startingUp)
+            return;
 
-    // shows applications at startup/login, but waits for mainloop to turn idle first
-    // we need to handle Gnome Shell 40 first
-    if (Version != 3)
-        // pointless restoring this variable as it only affects session startup
+        // shows applications at startup/login, but waits for mainloop to turn idle first
+        // we need to handle Gnome Shell 40 first
         Main.sessionMode.hasOverview = false;
 
-    // 1 millisecond might seem pointless but, without using a timer,
-    // the application view never shows otherwise
-    _idle = GLib.idle_add(GLib.PRIORITY_LOW, () => {
-        setTimer(1);
-        return GLib.SOURCE_REMOVE;
-    });
-}
+        // 1 millisecond might seem pointless but, without using a timer,
+        // the application view never shows otherwise
+        _idle = GLib.idle_add(GLib.PRIORITY_LOW, () => {
+            setTimer(1);
+            return GLib.SOURCE_REMOVE;
+        });
+    }
 
-function disable()
-{
-    removeTimer();
-    disconnectWindowSignals();
-
-    Main.overview.disconnect(_signal['overview-hidden']);
-    _manager.disconnect(_signal['workspace-switched']);
-
-    ImportClass.prototype.animateFromOverview = _function;
-
-    if (_idle)
+    disable()
     {
-        GLib.Source.remove(_idle);
-        _idle = null;
+        removeTimer();
+        disconnectWindowSignals();
+
+        Main.overview.disconnect(_signal['overview-hidden']);
+        _manager.disconnect(_signal['workspace-switched']);
+
+        ControlsManager.prototype.animateFromOverview = _function;
+
+        if (_idle)
+        {
+            GLib.Source.remove(_idle);
+            _idle = null;
+        }
     }
 }
