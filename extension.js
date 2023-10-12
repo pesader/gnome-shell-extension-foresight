@@ -17,7 +17,7 @@ let _idle = null;
 // before showing the apps overview
 let _showAppsTimeout = null;
 
-let _manager, _workspace, _monitor;
+let _manager, _workspace;
 
 let _activatedByExtension = false;
 
@@ -147,8 +147,6 @@ export default class ShowApplicationViewWhenWorkspaceEmptyExtension extends Exte
         _manager = global.screen;
         if (_manager == undefined)
             _manager = global.workspace_manager;
-
-        _monitor = global.display.get_primary_monitor();
     }
 
     enable()
