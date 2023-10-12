@@ -19,7 +19,7 @@ let _showAppsTimeout = null;
 
 let _manager, _workspace, _monitor;
 
-var _showAppsButtonChecked;
+let _activatedByExtension = false;
 
 const acceptedWindowTypes = [ Meta.WindowType.NORMAL, Meta.WindowType.DIALOG, Meta.WindowType.MODAL_DIALOG ];
 
@@ -51,14 +51,17 @@ function windowAccepted(window)
 function hideApps()
 {
     // hide the overview only if we're in application view
-    if (Main.overview.dash.showAppsButton.checked)
+    if (Main.overview.dash.showAppsButton.checked && _activatedByExtension)
         Main.overview.hide();
+
 }
 
 function showApps()
 {
-    if (_workspace.list_windows().filter(window => windowAccepted(window)).length == 0)
+    if (_workspace.list_windows().filter(window => windowAccepted(window)).length == 0) {
         Main.overview.showApps();
+        _activatedByExtension = true;
+    }
 }
 
 function windowAdded(workspace, window)
@@ -122,15 +125,18 @@ function checkWorkspace()
 
 function overviewHidden()
 {
-    // don't show the apps view if we were already looking at it
-    if (!_showAppsButtonChecked)
-        showApps();
+    _activatedByExtension = false;
+}
+
+function appsButtonChecked()
+{
+    if (!Main.overview.dash.showAppsButton.checked)
+        _activatedByExtension = false;
 }
 
 function animateFromOverview(callback)
 {
     // the original function sets _showAppsButton.checked = false, so we need to copy it to a local variable first
-    _showAppsButtonChecked = Main.overview.dash.showAppsButton.checked;
     _function.apply(this, [callback]);
 }
 
@@ -147,8 +153,6 @@ export default class ShowApplicationViewWhenWorkspaceEmptyExtension extends Exte
 
     enable()
     {
-        _showAppsButtonChecked = Main.overview.dash.showAppsButton.checked;
-
         _function = ControlsManager.prototype.animateFromOverview;
         ControlsManager.prototype.animateFromOverview = animateFromOverview;
 
@@ -159,17 +163,6 @@ export default class ShowApplicationViewWhenWorkspaceEmptyExtension extends Exte
 
         if (!Main.layoutManager._startingUp)
             return;
-
-        // shows applications at startup/login, but waits for mainloop to turn idle first
-        // we need to handle Gnome Shell 40 first
-        Main.sessionMode.hasOverview = false;
-
-        // 1 millisecond might seem pointless but, without using a timer,
-        // the application view never shows otherwise
-        _idle = GLib.idle_add(GLib.PRIORITY_LOW, () => {
-            setTimer(1);
-            return GLib.SOURCE_REMOVE;
-        });
     }
 
     disable()
@@ -177,6 +170,7 @@ export default class ShowApplicationViewWhenWorkspaceEmptyExtension extends Exte
         removeTimer();
         disconnectWindowSignals();
 
+        Main.overview.dash.showAppsButton.disconnect('notify::checked');
         Main.overview.disconnect(_signal['overview-hidden']);
         _manager.disconnect(_signal['workspace-switched']);
 
