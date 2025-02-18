@@ -4,12 +4,10 @@ import St from 'gi://St';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as WindowManager from 'resource:///org/gnome/shell/ui/windowManager.js';
-import {ControlsManager} from 'resource:///org/gnome/shell/ui/overviewControls.js';
 
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 let _signal = [];
-let _function;
 
 let _idle = null;
 
@@ -35,7 +33,7 @@ function removeTimer()
 function setTimer(interval)
 {
     _showAppsTimeout = GLib.timeout_add(GLib.PRIORITY_LOW, interval, () => {
-        showApps();
+        showActivities();
         return GLib.SOURCE_REMOVE;
     });
 }
@@ -48,18 +46,17 @@ function windowAccepted(window)
     return true;
 }
 
-function hideApps()
+function hideActivities()
 {
-    // hide the overview only if we're in application view
-    if (Main.overview.dash.showAppsButton.checked && _activatedByExtension)
+    if (_activatedByExtension){
         Main.overview.hide();
-
+    }
 }
 
-function showApps()
+function showActivities()
 {
-    if (_workspace.list_windows().filter(window => windowAccepted(window)).length == 0) {
-        Main.overview.showApps();
+    if (_workspace.list_windows().filter(window => windowAccepted(window)).length == 0){
+        Main.overview.show();
         _activatedByExtension = true;
     }
 }
@@ -72,7 +69,7 @@ function windowAdded(workspace, window)
     if (!windowAccepted(window))
         return;
 
-    hideApps();
+    hideActivities();
 }
 
 function windowRemoved(workspace, window)
@@ -85,7 +82,7 @@ function windowRemoved(workspace, window)
 
     if (!St.Settings.get().enable_animations)
     {
-        showApps();
+        showActivities();
         return;
     }
 
@@ -117,27 +114,15 @@ function checkWorkspace()
 
     getWorkspace();
 
-    if (!Main.overview.visible)
-        showApps();
-    else if (_workspace.list_windows().filter(window => windowAccepted(window)).length > 0)
-        hideApps();
+    if (_workspace.list_windows().filter(window => windowAccepted(window)).length > 0 && !Main.overview.dash.showAppsButton.checked)
+        hideActivities();
+    else if (!Main.overview.visible)
+        showActivities();
 }
 
 function overviewHidden()
 {
     _activatedByExtension = false;
-}
-
-function appsButtonChecked()
-{
-    if (!Main.overview.dash.showAppsButton.checked)
-        _activatedByExtension = false;
-}
-
-function animateFromOverview(callback)
-{
-    // the original function sets _showAppsButton.checked = false, so we need to copy it to a local variable first
-    _function.apply(this, [callback]);
 }
 
 export default class ShowApplicationViewWhenWorkspaceEmptyExtension extends Extension {
@@ -151,9 +136,7 @@ export default class ShowApplicationViewWhenWorkspaceEmptyExtension extends Exte
 
     enable()
     {
-        _function = ControlsManager.prototype.animateFromOverview;
-        ControlsManager.prototype.animateFromOverview = animateFromOverview;
-
+        _activatedByExtension = false;
         getWorkspace();
 
         _signal['workspace-switched'] = _manager.connect('workspace-switched', checkWorkspace);
@@ -168,11 +151,8 @@ export default class ShowApplicationViewWhenWorkspaceEmptyExtension extends Exte
         removeTimer();
         disconnectWindowSignals();
 
-        Main.overview.dash.showAppsButton.disconnect('notify::checked');
         Main.overview.disconnect(_signal['overview-hidden']);
         _manager.disconnect(_signal['workspace-switched']);
-
-        ControlsManager.prototype.animateFromOverview = _function;
 
         if (_idle)
         {
