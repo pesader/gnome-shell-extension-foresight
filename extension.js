@@ -61,17 +61,6 @@ function showActivities()
     }
 }
 
-function windowAdded(workspace, window)
-{
-    if (workspace != _workspace)
-        return;
-
-    if (!windowAccepted(window))
-        return;
-
-    hideActivities();
-}
-
 function windowRemoved(workspace, window)
 {
     if (workspace != _workspace)
@@ -104,7 +93,6 @@ function getWorkspace()
 {
     _workspace = _manager.get_active_workspace();
 
-    _signal['window-added'] = _workspace.connect('window-added', (workspace, window) => windowAdded(workspace, window));
     _signal['window-removed'] = _workspace.connect('window-removed', (workspace, window) => windowRemoved(workspace, window));
 }
 
