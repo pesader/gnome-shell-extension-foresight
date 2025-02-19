@@ -97,7 +97,7 @@ function checkWorkspace()
 
     getWorkspace();
 
-    if (_workspace.list_windows().filter(window => windowAccepted(window)).length > 0 && !Main.overview.dash.showAppsButton.checked)
+    if ((_workspace.list_windows().filter(window => windowAccepted(window)).length > 0 || _workspace.index() === 0) && !Main.overview.dash.showAppsButton.checked)
         hideActivities();
     else if (!Main.overview.visible)
         showActivities();
