@@ -13,31 +13,14 @@ let _signal = [];
 
 let _idle = null;
 
-// this timeout takes into account window animation times (if enabled)
-// before showing the apps overview
-let _showAppsTimeout = null;
-
 let _manager, _workspace;
 
 let _activatedByExtension = false;
 
 const acceptedWindowTypes = [ Meta.WindowType.NORMAL, Meta.WindowType.DIALOG, Meta.WindowType.MODAL_DIALOG ];
 
-function removeTimer()
-{
-    if (_showAppsTimeout == null)
-        return;
-
-    GLib.Source.remove(_showAppsTimeout);
-    _showAppsTimeout = null;
-}
-
-function setTimer(interval)
-{
-    _showAppsTimeout = GLib.timeout_add(GLib.PRIORITY_LOW, interval, () => {
-        showActivities();
-        return GLib.SOURCE_REMOVE;
-    });
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function windowAccepted(window)
@@ -67,8 +50,11 @@ function getWindowCloseAnimationTime(window)
 {
     let animationTime;
 
+    // If animations are disabled, then the animation time is zero
     if (!St.Settings.get().enable_animations)
         animationTime = 0;
+
+    // Otherwise, the animation time depends on the type of window
     else if (window.get_window_type() == Meta.WindowType.NORMAL)
         animationTime = DESTROY_WINDOW_ANIMATION_TIME
     else
@@ -77,7 +63,7 @@ function getWindowCloseAnimationTime(window)
     return animationTime;
 }
 
-function windowRemoved(workspace, window)
+async function windowRemoved(workspace, window)
 {
     if (workspace != _workspace)
         return;
@@ -85,15 +71,8 @@ function windowRemoved(workspace, window)
     if (!windowAccepted(window))
         return;
 
-    if (!St.Settings.get().enable_animations)
-    {
-        showActivities();
-        return;
-    }
-
-    removeTimer();
-
-    setTimer(getWindowCloseAnimationTime(window));
+    await sleep(getWindowCloseAnimationTime(window))
+    showActivities();
 }
 
 function disconnectWindowSignals()
@@ -152,7 +131,6 @@ export default class ShowApplicationViewWhenWorkspaceEmptyExtension extends Exte
 
     disable()
     {
-        removeTimer();
         disconnectWindowSignals();
 
         Main.overview.disconnect(_signal['overview-hidden']);
