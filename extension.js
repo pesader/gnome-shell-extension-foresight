@@ -1,11 +1,16 @@
 import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
 import St from 'gi://St';
+import Gio from 'gi://Gio';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import * as WindowManager from 'resource:///org/gnome/shell/ui/windowManager.js';
-
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+
+// Source: https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/js/ui/windowManager.js?ref_type=heads#L34-35
+const DESTROY_WINDOW_ANIMATION_TIME = 150;
+const DIALOG_DESTROY_WINDOW_ANIMATION_TIME = 100;
+
+const interfaceSettings = new Gio.Settings({schema: 'org.gnome.desktop.interface'});
 
 let _signal = [];
 
@@ -61,6 +66,20 @@ function showActivities()
     }
 }
 
+function getWindowCloseAnimationTime(window)
+{
+    let animationTime;
+
+    if (!interfaceSettings.get_boolean('enable-animations'))
+        animationTime = 0;
+    else if (window.get_window_type() == Meta.WindowType.NORMAL)
+        animationTime = DESTROY_WINDOW_ANIMATION_TIME
+    else
+        animationTime = DIALOG_DESTROY_WINDOW_ANIMATION_TIME
+
+    return animationTime;
+}
+
 function windowRemoved(workspace, window)
 {
     if (workspace != _workspace)
@@ -77,7 +96,7 @@ function windowRemoved(workspace, window)
 
     removeTimer();
 
-    setTimer(window.get_window_type() == Meta.WindowType.NORMAL ? WindowManager.DESTROY_WINDOW_ANIMATION_TIME : WindowManager.DIALOG_DESTROY_WINDOW_ANIMATION_TIME);
+    setTimer(getWindowCloseAnimationTime(window));
 }
 
 function disconnectWindowSignals()
