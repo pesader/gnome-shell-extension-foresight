@@ -1,7 +1,6 @@
 import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
 import St from 'gi://St';
-import Gio from 'gi://Gio';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -9,8 +8,6 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 // Source: https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/js/ui/windowManager.js?ref_type=heads#L34-35
 const DESTROY_WINDOW_ANIMATION_TIME = 150;
 const DIALOG_DESTROY_WINDOW_ANIMATION_TIME = 100;
-
-const interfaceSettings = new Gio.Settings({schema: 'org.gnome.desktop.interface'});
 
 let _signal = [];
 
@@ -70,7 +67,7 @@ function getWindowCloseAnimationTime(window)
 {
     let animationTime;
 
-    if (!interfaceSettings.get_boolean('enable-animations'))
+    if (!St.Settings.get().enable_animations)
         animationTime = 0;
     else if (window.get_window_type() == Meta.WindowType.NORMAL)
         animationTime = DESTROY_WINDOW_ANIMATION_TIME
