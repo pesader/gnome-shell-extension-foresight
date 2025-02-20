@@ -1,4 +1,5 @@
-# Show Application View When Workspace Empty
+# Foresight
+
 ## Gnome Shell extension
 
 ### Description
