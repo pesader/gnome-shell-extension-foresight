@@ -1,9 +1,9 @@
 {
-  "description": "Automagically opens the activities view when workspace is empty",
   "name": "Foresight",
+  "description": "Automagically opens the activities view when workspace is empty",
+  "uuid": "foresight@pesader.dev",
   "shell-version": [
     "47"
   ],
-  "url": "https://github.com/pesader/gnome-shell-extension-foresight",
-  "uuid": "foresight@pesader.dev"
+  "url": "https://github.com/pesader/foresight"
 }
