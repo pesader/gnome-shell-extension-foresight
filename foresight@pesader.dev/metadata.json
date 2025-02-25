@@ -3,6 +3,7 @@
   "description": "Automagically opens the activities view when workspace is empty",
   "uuid": "foresight@pesader.dev",
   "shell-version": [
+    "46",
     "47"
   ],
   "url": "https://github.com/pesader/foresight"
