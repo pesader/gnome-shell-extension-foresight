@@ -66,13 +66,13 @@ make lint-fix
 
 ### Code
 
-- This project is a fork of ["Show Application View When Workspace Empty"](https://github.com/fawtytoo/GnomeShellExtensions/tree/main/show_applications_instead_of_overview%40fawtytoo%20(3.38%E2%80%9343)) by fawtytoo
+- Codebase: forked from ["Show Application View When Workspace Empty"](https://github.com/fawtytoo/GnomeShellExtensions/tree/main/show_applications_instead_of_overview%40fawtytoo%20(3.38%E2%80%9343)) by fawtytoo
 
 ### Assets
 
 - Logo: based on [Snapshot](https://gitlab.gnome.org/GNOME/snapshot/-/blob/main/data/icons/org.gnome.Snapshot.svg?ref_type=heads), [Snowglobe](https://gitlab.gnome.org/bilelmoussaoui/snowglobe/-/blob/main/data/icons/hicolor/scalable/apps/com.belmoussaoui.snowglobe.svg?ref_type=heads), and art from [gnome.org](https://gitlab.gnome.org/Teams/Websites/www.gnome.org/-/blob/main/img/shell.svg?ref_type=heads)
 - Banner: inspired by the banners at [Flathub's home page](https://flathub.org/)
-- Extension logo in banner: is the symbolic icon from Matthew Jakeman's [Extension Manager](https://github.com/mjakeman/extension-manager/blob/master/data/icons/com.mattjakeman.ExtensionManager-symbolic.svg)
+- Extension logo in banner: is the symbolic icon from [Extension Manager](https://github.com/mjakeman/extension-manager/blob/master/data/icons/com.mattjakeman.ExtensionManager-symbolic.svg)
 - EGO banner: modified from [Just Perfection's work](https://gitlab.gnome.org/jrahmatzadeh/just-perfection/-/blob/main/data/imgs/ego.svg?ref_type=heads)
 
 ### Build system
