@@ -14,6 +14,7 @@ class Foresight {
         this._activatedByExtension = false;
         this._workspaceManager = workspaceManager;
         this._currentWorkspace = this._workspaceManager.get_active_workspace();
+        this._timeout = null;
     }
 
     _connectWorkspaceSignals() {
@@ -44,7 +45,15 @@ class Foresight {
 
 
     _sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+        let timeoutId;
+        const promise = new Promise(resolve => {
+            timeoutId = setTimeout(resolve, ms);
+        });
+
+        return {
+            promise,
+            cancel: () => clearTimeout(timeoutId),
+        };
     }
 
     _windowAccepted(window) {
@@ -83,15 +92,15 @@ class Foresight {
         return animationTime;
     }
 
-    async _windowRemoved(workspace, window) {
+    _windowRemoved(workspace, window) {
         if (workspace !== this._currentWorkspace)
             return;
 
         if (!this._windowAccepted(window))
             return;
 
-        await this._sleep(this._getWindowCloseAnimationTime(window));
-        this._showActivities();
+        this._timeout = this._sleep(this._getWindowCloseAnimationTime(window));
+        this._timeout.promise.then(() => this._showActivities());
     }
 
     _workspaceSwitched() {
@@ -111,26 +120,25 @@ class Foresight {
     }
 
     destroy() {
+        this.disconnectSignals();
+        this._timeout.cancel();
+
         this._signal = null;
         this._activatedByExtension = null;
         this._workspaceManager = null;
         this._currentWorkspace = null;
+        this._timeout = null;
     }
 }
 
 export default class ShowApplicationViewWhenWorkspaceEmptyExtension extends Extension {
-    constructor(metadata) {
-        super(metadata);
+    enable() {
         const workspaceManager = global.workspace_manager;
         this._foresight = new Foresight(workspaceManager);
-    }
-
-    enable() {
         this._foresight.connectSignals();
     }
 
     disable() {
-        this._foresight.disconnectSignals();
         this._foresight.destroy();
         this._foresight = null;
     }
