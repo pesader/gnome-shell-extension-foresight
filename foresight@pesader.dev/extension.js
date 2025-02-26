@@ -15,6 +15,9 @@ class Foresight {
         this._workspaceManager = workspaceManager;
         this._currentWorkspace = this._workspaceManager.get_active_workspace();
         this._timeout = null;
+
+        // Connect signals
+        this._connectSignals();
     }
 
     _connectWorkspaceSignals() {
@@ -29,14 +32,14 @@ class Foresight {
             this._currentWorkspace.disconnect(this._signal['window-removed']);
     }
 
-    connectSignals() {
+    _connectSignals() {
         this._connectWorkspaceSignals();
 
         this._signal['workspace-switched'] = this._workspaceManager.connect('workspace-switched', () => this._workspaceSwitched());
         this._signal['overview-hidden'] = Main.overview.connect('hidden', () => this._overviewHidden());
     }
 
-    disconnectSignals() {
+    _disconnectSignals() {
         this._disconnectWorkspaceSignals();
 
         Main.overview.disconnect(this._signal['overview-hidden']);
@@ -120,7 +123,7 @@ class Foresight {
     }
 
     destroy() {
-        this.disconnectSignals();
+        this._disconnectSignals();
         this._timeout.cancel();
 
         this._signal = null;
@@ -135,7 +138,6 @@ export default class ShowApplicationViewWhenWorkspaceEmptyExtension extends Exte
     enable() {
         const workspaceManager = global.workspace_manager;
         this._foresight = new Foresight(workspaceManager);
-        this._foresight.connectSignals();
     }
 
     disable() {
