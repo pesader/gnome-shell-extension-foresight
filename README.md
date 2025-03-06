@@ -2,6 +2,16 @@
 
 Foresight is a GNOME Shell Extension that automagically opens the activities view on empty workspaces. It uses callbacks to monitor windows and workspaces (instead of actively checking on them on certain time intervals), which makes it very efficient and responsive.
 
+## Showcase
+
+### Switching to an empty workspace
+
+https://github.com/user-attachments/assets/4263764b-ae55-4d96-99f0-bd1375f47d72
+
+### Closing all windows in a workspace
+
+https://github.com/user-attachments/assets/c4288aa9-d800-4d58-8c60-051a70f1347e
+
 ## Getting started
 
 ### Installation
