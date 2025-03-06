@@ -18,7 +18,7 @@ https://github.com/user-attachments/assets/c4288aa9-d800-4d58-8c60-051a70f1347e
 
 You can install Foresight using the GNOME Extensions website.
 
-<a href="">
+<a href="https://extensions.gnome.org/extension/7901/foresight/">
   <img height="80" src="assets/ego.png">
 </a>
 
