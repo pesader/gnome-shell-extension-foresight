@@ -61,7 +61,7 @@ class Foresight {
 
     _windowAccepted(window) {
         const acceptedWindowTypes = [Meta.WindowType.NORMAL, Meta.WindowType.DIALOG, Meta.WindowType.MODAL_DIALOG];
-        if (window.is_hidden() || acceptedWindowTypes.indexOf(window.get_window_type()) === -1)
+        if (window.is_hidden() || acceptedWindowTypes.indexOf(window.get_window_type()) === -1 || !window.is_on_primary_monitor())
             return false;
 
         return true;
