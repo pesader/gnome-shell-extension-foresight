@@ -1,5 +1,6 @@
 import Meta from 'gi://Meta';
 import St from 'gi://St';
+import Gio from 'gi://Gio';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -15,6 +16,7 @@ class Foresight {
         this._workspaceManager = workspaceManager;
         this._currentWorkspace = this._workspaceManager.get_active_workspace();
         this._timeout = null;
+        this._mutterSettings = Gio.Settings.new('org.gnome.mutter');
 
         // Connect signals
         this._connectSignals();
@@ -61,7 +63,7 @@ class Foresight {
 
     _windowAccepted(window) {
         const acceptedWindowTypes = [Meta.WindowType.NORMAL, Meta.WindowType.DIALOG, Meta.WindowType.MODAL_DIALOG];
-        if (window.is_hidden() || acceptedWindowTypes.indexOf(window.get_window_type()) === -1)
+        if (window.is_hidden() || acceptedWindowTypes.indexOf(window.get_window_type()) === -1 || (!window.is_on_primary_monitor() && this._mutterSettings.get_boolean('workspaces-only-on-primary')))
             return false;
 
         return true;
@@ -131,6 +133,7 @@ class Foresight {
         this._workspaceManager = null;
         this._currentWorkspace = null;
         this._timeout = null;
+        this._mutterSettings = null;
     }
 }
 
