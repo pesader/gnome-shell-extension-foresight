@@ -126,7 +126,9 @@ class Foresight {
 
     destroy() {
         this._disconnectSignals();
-        this._timeout.cancel();
+
+        if (this._timeout)
+            this._timeout.cancel();
 
         this._signal = null;
         this._activatedByExtension = null;
