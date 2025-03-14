@@ -1,6 +1,6 @@
 {
   "name": "Foresight",
-  "description": "Automagically opens the activities view when workspace is empty",
+  "description": "Automagically opens the activities view when workspace is empty. It uses callbacks to monitor windows and workspaces (instead of actively checking on them on certain time intervals), which makes it very efficient and responsive.",
   "uuid": "foresight@pesader.dev",
   "shell-version": [
     "46",
