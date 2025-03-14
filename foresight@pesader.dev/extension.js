@@ -97,11 +97,70 @@ class Foresight {
         return animationTime;
     }
 
+    _matchLibreOfficeVersion(str) {
+        return /^LibreOffice \d+\.\d+$/.test(str);
+    }
+
+    _isTemporaryWindow(window) {
+        if (
+            this._matchLibreOfficeVersion(window.title) &&
+            window.get_wm_class() === 'soffice' &&
+            (
+                window.get_sandboxed_app_id() === 'org.libreoffice.LibreOffice' ||
+                window.get_sandboxed_app_id() === null
+            )
+        )
+            return true;
+
+        const temporaryWindows = [
+            {
+                'title': 'Progress Information',
+                'wmClass': 'DBeaver',
+                'sandboxedAppId': 'io.dbeaver.DBeaver.Community',
+            },
+            {
+                'title': 'DBeaver',
+                'wmClass': 'java',
+                'sandboxedAppId': 'io.dbeaver.DBeaver.Community',
+            },
+            {
+                'title': 'Steam',
+                'wmClass': null,
+                'sandboxedAppId': 'com.valvesoftware.Steam',
+            },
+            {
+                'title': 'Sign in to Steam',
+                'wmClass': 'steam',
+                'sandboxedAppId': 'com.valvesoftware.Steam',
+            },
+            {
+                'title': 'Launching...',
+                'wmClass': 'steam',
+                'sandboxedAppId': 'com.valvesoftware.Steam',
+            },
+        ];
+        for (const temporaryWindow of temporaryWindows) {
+            if (
+                window.get_title() === temporaryWindow['title'] &&
+                window.get_wm_class() === temporaryWindow['wmClass'] &&
+                (
+                    window.get_sandboxed_app_id() === temporaryWindow['sandboxedAppId'] ||
+                    window.get_sandboxed_app_id() === null
+                )
+            )
+                return true;
+        }
+        return false;
+    }
+
     _windowRemoved(workspace, window) {
         if (workspace !== this._currentWorkspace)
             return;
 
         if (!this._windowAccepted(window))
+            return;
+
+        if (this._isTemporaryWindow(window))
             return;
 
         this._timeout = this._sleep(this._getWindowCloseAnimationTime(window));
