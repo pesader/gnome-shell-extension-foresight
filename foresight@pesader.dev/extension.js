@@ -138,6 +138,11 @@ class Foresight {
                 'wmClass': 'steam',
                 'sandboxedAppId': 'com.valvesoftware.Steam',
             },
+            {
+                'title': 'Discord Updater',
+                'wmClass': 'discord',
+                'sandboxedAppId': 'com.discordapp.Discord',
+            },
         ];
         for (const temporaryWindow of temporaryWindows) {
             if (
