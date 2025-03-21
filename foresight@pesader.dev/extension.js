@@ -178,7 +178,7 @@ class Foresight {
         this._currentWorkspace = this._workspaceManager.get_active_workspace();
         this._connectWorkspaceSignals();
 
-        if ((this._currentWorkspace.list_windows().filter(window => this._windowAccepted(window)).length > 0 || this._currentWorkspace.index() === 0) && !Main.overview.dash.showAppsButton.checked)
+        if ((this._currentWorkspace.list_windows().filter(window => this._windowAccepted(window)).length > 0) && !Main.overview.dash.showAppsButton.checked)
             this._hideActivities();
         else if (!Main.overview.visible)
             this._showActivities();
