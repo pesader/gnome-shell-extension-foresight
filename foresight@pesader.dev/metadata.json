@@ -4,7 +4,8 @@
   "uuid": "foresight@pesader.dev",
   "shell-version": [
     "46",
-    "47"
+    "47",
+    "48"
   ],
   "url": "https://github.com/pesader/foresight"
 }
