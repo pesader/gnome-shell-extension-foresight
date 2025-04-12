@@ -27,11 +27,17 @@ class Foresight {
             'window-removed',
             (workspace, window) => this._windowRemoved(workspace, window)
         );
+        this._signal["window-added"] = this._currentWorkspace.connect(
+            "window-added",
+            (workspace, window) => this._windowAdded(workspace, window)
+        );
     }
 
     _disconnectWorkspaceSignals() {
         if (this._signal['window-removed'])
             this._currentWorkspace.disconnect(this._signal['window-removed']);
+        if (this._signal['window-added'])
+            this._currentWorkspace.disconnect(this._signal['window-added']);
     }
 
     _connectSignals() {
@@ -61,9 +67,15 @@ class Foresight {
         };
     }
 
-    _windowAccepted(window) {
+    _windowAccepted(window, isAdded = false) {
         const acceptedWindowTypes = [Meta.WindowType.NORMAL, Meta.WindowType.DIALOG, Meta.WindowType.MODAL_DIALOG];
-        if (window.is_hidden() || acceptedWindowTypes.indexOf(window.get_window_type()) === -1 || (!window.is_on_primary_monitor() && this._mutterSettings.get_boolean('workspaces-only-on-primary')))
+        if (
+            // For some reason when the window is opened/added via a shortcut window.is_hidden() returns true
+            // Use flag isAdded to workaround this ignoring window.is_hidden() in the checks
+            (!isAdded && window.is_hidden()) || 
+            acceptedWindowTypes.indexOf(window.get_window_type()) === -1 ||
+            (!window.is_on_primary_monitor() && this._mutterSettings.get_boolean('workspaces-only-on-primary'))
+        )
             return false;
 
         return true;
@@ -156,6 +168,20 @@ class Foresight {
                 return true;
         }
         return false;
+    }
+
+    _windowAdded(workspace, window) {
+        if (workspace !== this._currentWorkspace)
+            return;
+
+        if (!this._windowAccepted(window, true))
+            return;
+
+        if (this._isTemporaryWindow(window))
+            return;
+
+        if (Main.overview.visible)
+            Main.overview.hide();
     }
 
     _windowRemoved(workspace, window) {
