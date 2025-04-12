@@ -181,7 +181,7 @@ class Foresight {
             return;
 
         if (Main.overview.visible)
-            Main.overview.hide();
+            this._hideActivities();
     }
 
     _windowRemoved(workspace, window) {
