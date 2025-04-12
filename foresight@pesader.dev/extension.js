@@ -27,8 +27,8 @@ class Foresight {
             'window-removed',
             (workspace, window) => this._windowRemoved(workspace, window)
         );
-        this._signal["window-added"] = this._currentWorkspace.connect(
-            "window-added",
+        this._signal['window-added'] = this._currentWorkspace.connect(
+            'window-added',
             (workspace, window) => this._windowAdded(workspace, window)
         );
     }
@@ -72,7 +72,7 @@ class Foresight {
         if (
             // For some reason when the window is opened/added via a shortcut window.is_hidden() returns true
             // Use flag isAdded to workaround this ignoring window.is_hidden() in the checks
-            (!isAdded && window.is_hidden()) || 
+            (!isAdded && window.is_hidden()) ||
             acceptedWindowTypes.indexOf(window.get_window_type()) === -1 ||
             (!window.is_on_primary_monitor() && this._mutterSettings.get_boolean('workspaces-only-on-primary'))
         )
