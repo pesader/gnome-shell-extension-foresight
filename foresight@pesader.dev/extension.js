@@ -63,7 +63,7 @@ class Foresight {
 
     _windowAccepted(window) {
         const acceptedWindowTypes = [Meta.WindowType.NORMAL, Meta.WindowType.DIALOG, Meta.WindowType.MODAL_DIALOG];
-        if (window.is_hidden() || acceptedWindowTypes.indexOf(window.get_window_type()) === -1 || (!window.is_on_primary_monitor() && this._mutterSettings.get_boolean('workspaces-only-on-primary')))
+        if (window.is_hidden() || !acceptedWindowTypes.includes(window.get_window_type()) || (!window.is_on_primary_monitor() && this._mutterSettings.get_boolean('workspaces-only-on-primary')))
             return false;
 
         return true;
@@ -75,7 +75,7 @@ class Foresight {
     }
 
     _showActivities() {
-        if (this._currentWorkspace.list_windows().filter(window => this._windowAccepted(window)).length === 0) {
+        if (!this._currentWorkspace.list_windows().some(window => this._windowAccepted(window))) {
             Main.overview.show();
             this._activatedByExtension = true;
         }
@@ -178,7 +178,7 @@ class Foresight {
         this._currentWorkspace = this._workspaceManager.get_active_workspace();
         this._connectWorkspaceSignals();
 
-        if ((this._currentWorkspace.list_windows().filter(window => this._windowAccepted(window)).length > 0) && !Main.overview.dash.showAppsButton.checked)
+        if ((this._currentWorkspace.list_windows().some(window => this._windowAccepted(window))) && !Main.overview.dash.showAppsButton.checked)
             this._hideActivities();
         else if (!Main.overview.visible)
             this._showActivities();
