@@ -1,8 +1,11 @@
-*.zip
-node_modules/
-package-lock.json
-package.json
-docs/
+# Ignore build output directory
+dist/
 
-# gettext backup files
+# Ignore node modules (dependencies)
+node_modules/
+
+# Ignore VS Code workspace settings
+.vscode/
+
+# Ignore editor backup files (e.g., Vim, Emacs, Gedit)
 *~

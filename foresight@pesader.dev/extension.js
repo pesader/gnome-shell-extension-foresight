@@ -1,212 +1,262 @@
 import Meta from 'gi://Meta';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
-
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-// Source: https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/js/ui/windowManager.js?ref_type=heads#L34-35
+// Animation durations from GNOME Shell source
+// Source: https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/js/ui/windowManager.js#L32-33
 const DESTROY_WINDOW_ANIMATION_TIME = 150;
 const DIALOG_DESTROY_WINDOW_ANIMATION_TIME = 100;
 
+// Window types that should trigger overview behavior
+const VALID_WINDOW_TYPES = [
+    Meta.WindowType.NORMAL,
+    Meta.WindowType.DIALOG,
+    Meta.WindowType.MODAL_DIALOG,
+];
+
+// Patterns for temporary windows that should not trigger overview behavior
+const TEMPORARY_WINDOW_PATTERNS = [
+    // DBeaver splash screens
+    {
+        title: 'Progress Information',
+        wmClass: 'DBeaver',
+        appId: 'io.dbeaver.DBeaver.Community',
+    },
+    {
+        title: 'DBeaver',
+        wmClass: 'java',
+        appId: 'io.dbeaver.DBeaver.Community',
+    },
+    // Steam splash and login screens
+    {
+        title: 'Steam',
+        wmClass: null,
+        appId: 'com.valvesoftware.Steam',
+    },
+    {
+        title: 'Sign in to Steam',
+        wmClass: 'steam',
+        appId: 'com.valvesoftware.Steam',
+    },
+    {
+        title: 'Launching...',
+        wmClass: 'steam',
+        appId: 'com.valvesoftware.Steam',
+    },
+    // Discord updater
+    {
+        title: 'Discord Updater',
+        wmClass: 'discord',
+        appId: 'com.discordapp.Discord',
+    },
+    // LibreOffice splash screen
+    {
+        titleRegex: /^LibreOffice \d+\.\d+$/,
+        wmClass: 'soffice',
+        appId: 'org.libreoffice.LibreOffice',
+    },
+];
+
 class Foresight {
     constructor(workspaceManager) {
-        this._signal = [];
-        this._activatedByExtension = false;
+        this._signals = {};
+        this._overviewActivatedByForesight = false;
         this._workspaceManager = workspaceManager;
         this._currentWorkspace = this._workspaceManager.get_active_workspace();
-        this._timeout = null;
+        this._closeAnimationTimeout = null;
         this._mutterSettings = Gio.Settings.new('org.gnome.mutter');
 
-        // Connect signals
         this._connectSignals();
     }
 
-    _connectWorkspaceSignals() {
-        this._signal['window-removed'] = this._currentWorkspace.connect(
-            'window-removed',
-            (workspace, window) => this._windowRemoved(workspace, window)
-        );
-    }
-
-    _disconnectWorkspaceSignals() {
-        if (this._signal['window-removed'])
-            this._currentWorkspace.disconnect(this._signal['window-removed']);
-    }
+    // ==================== Signal Management ====================
 
     _connectSignals() {
         this._connectWorkspaceSignals();
 
-        this._signal['workspace-switched'] = this._workspaceManager.connect('workspace-switched', () => this._workspaceSwitched());
-        this._signal['overview-hidden'] = Main.overview.connect('hidden', () => this._overviewHidden());
+        this._signals.workspaceSwitched = this._workspaceManager.connect('workspace-switched', () =>
+            this._onWorkspaceSwitched()
+        );
+
+        this._signals.overviewHidden = Main.overview.connect(
+            'hidden',
+            () => (this._overviewActivatedByForesight = false)
+        );
     }
 
     _disconnectSignals() {
         this._disconnectWorkspaceSignals();
 
-        Main.overview.disconnect(this._signal['overview-hidden']);
-        this._workspaceManager.disconnect(this._signal['workspace-switched']);
+        if (this._signals.overviewHidden) Main.overview.disconnect(this._signals.overviewHidden);
+
+        if (this._signals.workspaceSwitched)
+            this._workspaceManager.disconnect(this._signals.workspaceSwitched);
     }
 
+    _connectWorkspaceSignals() {
+        this._signals.windowRemoved = this._currentWorkspace.connect(
+            'window-removed',
+            (workspace, window) => this._onWindowRemoved(workspace, window)
+        );
 
-    _sleep(ms) {
-        let timeoutId;
-        const promise = new Promise(resolve => {
-            timeoutId = setTimeout(resolve, ms);
+        this._signals.windowAdded = this._currentWorkspace.connect(
+            'window-added',
+            (workspace, window) => this._onWindowAdded(workspace, window)
+        );
+    }
+
+    _disconnectWorkspaceSignals() {
+        if (this._signals.windowRemoved) {
+            this._currentWorkspace.disconnect(this._signals.windowRemoved);
+            this._signals.windowRemoved = null;
+        }
+
+        if (this._signals.windowAdded) {
+            this._currentWorkspace.disconnect(this._signals.windowAdded);
+            this._signals.windowAdded = null;
+        }
+    }
+
+    // ==================== Event Handlers ====================
+
+    _onWindowAdded(workspace, window) {
+        // Ignore windows not on current workspace
+        if (workspace !== this._currentWorkspace) return;
+
+        // Ignore invalid or temporary windows
+        if (!this._isValidWindow(window, true) || this._isTemporaryWindow(window)) return;
+
+        // Hide overview when a new window appears (if we activated it)
+        if (Main.overview.visible) this._hideOverview();
+    }
+
+    _onWindowRemoved(workspace, window) {
+        // Ignore windows not on current workspace
+        if (workspace !== this._currentWorkspace) return;
+
+        // Ignore invalid or temporary windows
+        if (!this._isValidWindow(window) || this._isTemporaryWindow(window)) return;
+
+        // Wait for close animation, then show overview if workspace is empty
+        const closeAnimationDuration = this._getWindowCloseAnimationTime(window);
+        this._closeAnimationTimeout = this._createCancellableTimeout(closeAnimationDuration);
+        this._closeAnimationTimeout.promise.then(() => {
+            if (!this._workspaceHasValidWindows()) this._showOverview();
         });
-
-        return {
-            promise,
-            cancel: () => clearTimeout(timeoutId),
-        };
     }
 
-    _windowAccepted(window) {
-        const acceptedWindowTypes = [Meta.WindowType.NORMAL, Meta.WindowType.DIALOG, Meta.WindowType.MODAL_DIALOG];
-        if (window.is_hidden() || acceptedWindowTypes.indexOf(window.get_window_type()) === -1 || (!window.is_on_primary_monitor() && this._mutterSettings.get_boolean('workspaces-only-on-primary')))
-            return false;
+    _onWorkspaceSwitched() {
+        // Reconnect signals to the new active workspace
+        this._disconnectWorkspaceSignals();
+        this._currentWorkspace = this._workspaceManager.get_active_workspace();
+        this._connectWorkspaceSignals();
+
+        // Show or hide overview based on workspace state
+        if (this._workspaceHasValidWindows() && !this._isAppGridVisible()) this._hideOverview();
+        else if (!Main.overview.visible) this._showOverview();
+    }
+
+    // ==================== Helper Methods ====================
+
+    _workspaceHasValidWindows() {
+        return this._currentWorkspace.list_windows().some(window => this._isValidWindow(window));
+    }
+
+    _isAppGridVisible() {
+        return Main.overview.dash.showAppsButton.checked;
+    }
+
+    _showOverview() {
+        Main.overview.show();
+        this._overviewActivatedByForesight = true;
+    }
+
+    _hideOverview() {
+        if (this._overviewActivatedByForesight) Main.overview.hide();
+    }
+
+    _isValidWindow(window, isBeingAdded = false) {
+        // Check if window type is valid
+        if (!VALID_WINDOW_TYPES.includes(window.get_window_type())) return false;
+
+        // Skip hidden windows (except when first added, due to shortcut quirk)
+        if (!isBeingAdded && window.is_hidden()) return false;
+
+        // If workspaces are limited to primary monitor, skip secondary monitor windows
+        const isWorkspacesOnPrimaryOnly = this._mutterSettings.get_boolean(
+            'workspaces-only-on-primary'
+        );
+        if (isWorkspacesOnPrimaryOnly && !window.is_on_primary_monitor()) return false;
 
         return true;
     }
 
-    _hideActivities() {
-        if (this._activatedByExtension)
-            Main.overview.hide();
+    _isTemporaryWindow(window) {
+        const title = window.get_title();
+        const wmClass = window.get_wm_class();
+        const appId = window.get_sandboxed_app_id();
+
+        return this._matchesTemporaryWindowPattern(title, wmClass, appId);
     }
 
-    _showActivities() {
-        if (this._currentWorkspace.list_windows().filter(window => this._windowAccepted(window)).length === 0) {
-            Main.overview.show();
-            this._activatedByExtension = true;
-        }
+    _matchesTemporaryWindowPattern(title, wmClass, appId) {
+        return TEMPORARY_WINDOW_PATTERNS.some(windowPattern => {
+            // Check title (exact match or regex)
+            const titleMatches = windowPattern.titleRegex
+                ? windowPattern.titleRegex.test(title)
+                : title === windowPattern.title;
+
+            // Check wmClass (exact match or null pattern)
+            const wmClassMatches = wmClass === windowPattern.wmClass;
+
+            // Check appId (exact match or null allowed)
+            const appIdMatches = appId === windowPattern.appId || appId === null;
+
+            return titleMatches && wmClassMatches && appIdMatches;
+        });
     }
 
     _getWindowCloseAnimationTime(window) {
-        let animationTime;
+        if (!St.Settings.get().enable_animations) return 0;
 
-        // If animations are disabled, then the animation time is zero
-        if (!St.Settings.get().enable_animations)
-            animationTime = 0;
-
-        // Otherwise, the animation time depends on the type of window
-        else if (window.get_window_type() === Meta.WindowType.NORMAL)
-            animationTime = DESTROY_WINDOW_ANIMATION_TIME;
-        else
-            animationTime = DIALOG_DESTROY_WINDOW_ANIMATION_TIME;
-
-        return animationTime;
+        return window.get_window_type() === Meta.WindowType.NORMAL
+            ? DESTROY_WINDOW_ANIMATION_TIME
+            : DIALOG_DESTROY_WINDOW_ANIMATION_TIME;
     }
 
-    _matchLibreOfficeVersion(str) {
-        return /^LibreOffice \d+\.\d+$/.test(str);
+    _createCancellableTimeout(ms) {
+        let timeoutId;
+
+        return {
+            promise: new Promise(resolve => {
+                timeoutId = setTimeout(resolve, ms);
+            }),
+            cancel: () => clearTimeout(timeoutId),
+        };
     }
 
-    _isTemporaryWindow(window) {
-        if (
-            this._matchLibreOfficeVersion(window.title) &&
-            window.get_wm_class() === 'soffice' &&
-            (
-                window.get_sandboxed_app_id() === 'org.libreoffice.LibreOffice' ||
-                window.get_sandboxed_app_id() === null
-            )
-        )
-            return true;
-
-        const temporaryWindows = [
-            {
-                'title': 'Progress Information',
-                'wmClass': 'DBeaver',
-                'sandboxedAppId': 'io.dbeaver.DBeaver.Community',
-            },
-            {
-                'title': 'DBeaver',
-                'wmClass': 'java',
-                'sandboxedAppId': 'io.dbeaver.DBeaver.Community',
-            },
-            {
-                'title': 'Steam',
-                'wmClass': null,
-                'sandboxedAppId': 'com.valvesoftware.Steam',
-            },
-            {
-                'title': 'Sign in to Steam',
-                'wmClass': 'steam',
-                'sandboxedAppId': 'com.valvesoftware.Steam',
-            },
-            {
-                'title': 'Launching...',
-                'wmClass': 'steam',
-                'sandboxedAppId': 'com.valvesoftware.Steam',
-            },
-            {
-                'title': 'Discord Updater',
-                'wmClass': 'discord',
-                'sandboxedAppId': 'com.discordapp.Discord',
-            },
-        ];
-        for (const temporaryWindow of temporaryWindows) {
-            if (
-                window.get_title() === temporaryWindow['title'] &&
-                window.get_wm_class() === temporaryWindow['wmClass'] &&
-                (
-                    window.get_sandboxed_app_id() === temporaryWindow['sandboxedAppId'] ||
-                    window.get_sandboxed_app_id() === null
-                )
-            )
-                return true;
-        }
-        return false;
-    }
-
-    _windowRemoved(workspace, window) {
-        if (workspace !== this._currentWorkspace)
-            return;
-
-        if (!this._windowAccepted(window))
-            return;
-
-        if (this._isTemporaryWindow(window))
-            return;
-
-        this._timeout = this._sleep(this._getWindowCloseAnimationTime(window));
-        this._timeout.promise.then(() => this._showActivities());
-    }
-
-    _workspaceSwitched() {
-        this._disconnectWorkspaceSignals();
-
-        this._currentWorkspace = this._workspaceManager.get_active_workspace();
-        this._connectWorkspaceSignals();
-
-        if ((this._currentWorkspace.list_windows().filter(window => this._windowAccepted(window)).length > 0) && !Main.overview.dash.showAppsButton.checked)
-            this._hideActivities();
-        else if (!Main.overview.visible)
-            this._showActivities();
-    }
-
-    _overviewHidden() {
-        this._activatedByExtension = false;
-    }
+    // ==================== Lifecycle ====================
 
     destroy() {
         this._disconnectSignals();
 
-        if (this._timeout)
-            this._timeout.cancel();
+        if (this._closeAnimationTimeout) this._closeAnimationTimeout.cancel();
 
-        this._signal = null;
-        this._activatedByExtension = null;
+        // Clean up all references
+        this._signals = null;
+        this._overviewActivatedByForesight = null;
         this._workspaceManager = null;
         this._currentWorkspace = null;
-        this._timeout = null;
+        this._closeAnimationTimeout = null;
         this._mutterSettings = null;
     }
 }
 
-export default class ShowApplicationViewWhenWorkspaceEmptyExtension extends Extension {
+export default class ForesightExtension extends Extension {
     enable() {
-        const workspaceManager = global.workspace_manager;
-        this._foresight = new Foresight(workspaceManager);
+        this._foresight = new Foresight(global.workspace_manager);
     }
 
     disable() {

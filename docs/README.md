@@ -50,33 +50,70 @@ You can then build and install the extension with:
 
 ```bash
 cd gnome-shell-extension-foresight
-make build && make install
+npm install && npm run all
 ```
 
 You can run a nested session of GNOME Shell to test the extension out with:
 
 ```bash
-make run
+npm run start
 ```
 
-Before submitting a pull request, make sure you install and run the linter with:
+### Code Formatting and Linting
+
+Before submitting a pull request, ensure that you install and run both the formatter and the linter by following these steps:
+
+1. Install the required dependencies:
 
 ```bash
-make lint-install # install the linter
-make lint         # run the linter
+npm install
 ```
 
-You can also have the linter attempt to fix the errors it found with:
+2. Run the formatter and linter:
 
 ```bash
-make lint-fix
+npm run fmt-lint
 ```
+
+3. To automatically fix any detected issues, use:
+
+```bash
+npm run fmt-lint:fix
+```
+
+Alternatively, you can run the formatter and linter individually:
+
+#### Formatter
+
+- Check formatting:
+
+  ```bash
+  npm run fmt
+  ```
+
+- Fix formatting issues:
+  ```bash
+  npm run fmt:fix
+  ```
+
+#### Linter
+
+- Check for linting issues:
+
+  ```bash
+  npm run lint
+  ```
+
+- Fix linting issues:
+  ```bash
+  npm run lint:fix
+  ```
 
 ## Attribution
 
 ### Code
 
-- Codebase: forked from ["Show Application View When Workspace Empty"](https://github.com/fawtytoo/GnomeShellExtensions/tree/main/show_applications_instead_of_overview%40fawtytoo%20(3.38%E2%80%9343)) by fawtytoo
+- Codebase: forked from ["Show Application View When Workspace Empty"](<https://github.com/fawtytoo/GnomeShellExtensions/tree/main/show_applications_instead_of_overview%40fawtytoo%20(3.38%E2%80%9343)>) by fawtytoo
 
 ### Assets
 
@@ -84,11 +121,6 @@ make lint-fix
 - Banner: inspired by the banners at [Flathub's home page](https://flathub.org/)
 - Extension logo in banner: is the symbolic icon from [Extension Manager](https://github.com/mjakeman/extension-manager/blob/master/data/icons/com.mattjakeman.ExtensionManager-symbolic.svg)
 - EGO banner: modified from [Just Perfection's work](https://gitlab.gnome.org/jrahmatzadeh/just-perfection/-/blob/main/data/imgs/ego.svg?ref_type=heads)
-
-### Build system
-
-- Makefile: inspired by the Makefiles of [Caffeine](https://github.com/eonpatapon/gnome-shell-extension-caffeine/blob/master/Makefile) and [Blocker](https://github.com/pesader/gnome-shell-extension-blocker/blob/main/Makefile)
-- GitHub Actions workflow for linting: again, inspired [Caffeine](https://github.com/eonpatapon/gnome-shell-extension-caffeine/tree/master/.github/workflows) and [Blocker](https://github.com/pesader/gnome-shell-extension-blocker/blob/main/.github/workflows/linter.yml)
 
 ## Gratitude
 
