@@ -50,13 +50,13 @@ You can then build and install the extension with:
 
 ```bash
 cd gnome-shell-extension-foresight
-make build && make install
+npm install && npm run all
 ```
 
 You can run a nested session of GNOME Shell to test the extension out with:
 
 ```bash
-make run
+npm run start
 ```
 
 ### Code Formatting and Linting
@@ -121,11 +121,6 @@ Alternatively, you can run the formatter and linter individually:
 - Banner: inspired by the banners at [Flathub's home page](https://flathub.org/)
 - Extension logo in banner: is the symbolic icon from [Extension Manager](https://github.com/mjakeman/extension-manager/blob/master/data/icons/com.mattjakeman.ExtensionManager-symbolic.svg)
 - EGO banner: modified from [Just Perfection's work](https://gitlab.gnome.org/jrahmatzadeh/just-perfection/-/blob/main/data/imgs/ego.svg?ref_type=heads)
-
-### Build system
-
-- Makefile: inspired by the Makefiles of [Caffeine](https://github.com/eonpatapon/gnome-shell-extension-caffeine/blob/master/Makefile) and [Blocker](https://github.com/pesader/gnome-shell-extension-blocker/blob/main/Makefile)
-- GitHub Actions workflow for linting: again, inspired [Caffeine](https://github.com/eonpatapon/gnome-shell-extension-caffeine/tree/master/.github/workflows) and [Blocker](https://github.com/pesader/gnome-shell-extension-blocker/blob/main/.github/workflows/linter.yml)
 
 ## Gratitude
 
