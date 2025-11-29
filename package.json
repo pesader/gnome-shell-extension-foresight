@@ -1,8 +1,8 @@
 {
   "scripts": {
-    "all": "npm run build && npm run install",
+    "all": "npm run build && npm run setup",
     "build": "mkdir -p dist && gnome-extensions pack --force foresight@pesader.dev -o dist/",
-    "install": "gnome-extensions uninstall foresight@pesader.dev 2>/dev/null || true && gnome-extensions install --force dist/foresight@pesader.dev.shell-extension.zip",
+    "setup": "gnome-extensions uninstall foresight@pesader.dev 2>/dev/null || true && gnome-extensions install --force dist/foresight@pesader.dev.shell-extension.zip",
     "start": "env MUTTER_DEBUG_DUMMY_MODE_SPECS=1256x768 dbus-run-session -- gnome-shell --nested",
     "start:multimonitor": "env MUTTER_DEBUG_NUM_DUMMY_MONITORS=2 dbus-run-session -- gnome-shell --nested",
     "fmt": "prettier --check .",
