@@ -203,7 +203,7 @@ class Foresight {
     }
 }
 
-export default class ShowApplicationViewWhenWorkspaceEmptyExtension extends Extension {
+export default class ForesightExtension extends Extension {
     enable() {
         const workspaceManager = global.workspace_manager;
         this._foresight = new Foresight(workspaceManager);
